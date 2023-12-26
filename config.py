@@ -42,6 +42,13 @@ class HSU_Preferences(AddonPreferences):
         update=lambda self, context: set_prop('weighted_normal_bottom', self.weighted_normal_bottom)
     )
 
+    weighted_normal_exclude: StringProperty(
+        name="Weighted-normal Exclusion Filter",
+        description="Exclusion filter to not push weighted normal modifier to the bottom of the stack",
+        default="filter",
+        update=lambda self, context: set_prop('weighted_normal_exclude', self.weighted_normal_exclude)
+    )
+
     # Draw the preferences in the addon settings
     def draw(self, context):
         layout = self.layout
@@ -53,6 +60,8 @@ class HSU_Preferences(AddonPreferences):
         row.prop(self, "shade_auto_smooth")
         row.prop(self, "shade_auto_smooth_angle")
 
-        column = layout.column(heading="Modifiers", align=False)
-        column.prop(self, "weighted_normal_bottom")
+        #column = layout.column(heading="Modifiers", align=False)
+        row = layout.row(heading="Weighted Normals", align=False)
+        row.prop(self, "weighted_normal_bottom")
+        row.prop(self, "weighted_normal_exclude")
 

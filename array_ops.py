@@ -2,7 +2,7 @@ import bpy
 from bpy.types import Operator, Panel
 from bpy.props import FloatVectorProperty, FloatProperty, IntProperty
 import math
-# from mathutils import Vector
+from mathutils import Vector
 
 """
 TODO:
@@ -92,6 +92,8 @@ class HSU_CircularArrayOperator(Operator):
         # Get active object and selected objects
         active_obj = context.active_object
         selected_objs = context.selected_objects
+        if active_obj in selected_objs:
+            selected_objs.remove(active_obj)
 
         try:
             if self.modifiers:
@@ -112,23 +114,27 @@ class HSU_CircularArrayOperator(Operator):
         # Parent the empty to the active object
         self.empty.parent = active_obj
 
+        cursor_location = context.scene.cursor.location
+        context.scene.cursor.location = active_obj.location
+
         # Loop through selected objects and add array modifier
         for obj in selected_objs:
-            if obj != active_obj:
-                # Add array modifier
-                array_modifier = obj.modifiers.new(name="Array", type='ARRAY')
-                array_modifier.count = self.instance_count
-                array_modifier.use_relative_offset = False
-                array_modifier.use_object_offset = True
-                array_modifier.offset_object = self.empty
-                self.modifiers.append(array_modifier)
+            # Add array modifier
+            array_modifier = obj.modifiers.new(name="Array", type='ARRAY')
+            array_modifier.count = self.instance_count
+            array_modifier.use_relative_offset = False
+            array_modifier.use_object_offset = True
+            array_modifier.offset_object = self.empty
+            self.modifiers.append(array_modifier)
 
-                # Set object origin
-                bpy.context.view_layer.objects.active = obj
-                bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
+            # Set object origin
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
 
-                # Make selected objects children of the active object
-                obj.parent = active_obj
+            # Make selected objects children of the active object
+            obj.parent = active_obj
+
+        context.scene.cursor.location = cursor_location
 
         return {'FINISHED'}
     
@@ -152,7 +158,7 @@ class HSU_LinearArrayOperator(Operator):
 
     @classmethod
     def poll(cls, context):
-        return (context.active_object is not None and len(context.selected_objects) > 1)
+        return (context.active_object is not None or len(context.selected_objects) > 1)
 
     def __init__(self):
         self.modifiers = []
@@ -160,6 +166,7 @@ class HSU_LinearArrayOperator(Operator):
         print("Start")
 
     def __del__(self):
+        self.empty_location = Vector((0, 0, 0))
         print("End")
 
     def draw(self, context):
@@ -172,7 +179,8 @@ class HSU_LinearArrayOperator(Operator):
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
-            self.empty_location = tuple([math.radians(event.mouse_region_x*(0.1 if event.shift else 0.5)*x) for x in self.location_axis])
+            diff = self.old_mouse_region_x-event.mouse_region_x
+            self.empty_location = self.empty_location+Vector(tuple([diff*(0.1 if event.shift else 0.5)*x for x in self.location_axis]))
         elif event.type == 'WHEELUPMOUSE':
             self.instance_count += 1
         elif event.type == 'WHEELDOWNMOUSE':
@@ -192,6 +200,7 @@ class HSU_LinearArrayOperator(Operator):
         wm = context.window_manager
         # self.rotation_axis = context.region_data.view_rotation.axis*Vector((0, 0, -1))
         wm.modal_handler_add(self)
+        self.old_mouse_region_x = event.mouse_region_x
         return {'RUNNING_MODAL'}
 
     def update(self, context):
@@ -207,9 +216,13 @@ class HSU_LinearArrayOperator(Operator):
             modifier.count = self.instance_count
 
     def execute(self, context):
-        # Get active object and selected objects
         active_obj = context.active_object
         selected_objs = context.selected_objects
+        if active_obj is None:
+            active_obj = selected_objs[0]
+        #self.empty_location = active_obj.location
+        if active_obj not in selected_objs:
+            selected_objs.add(active_obj)
 
         try:
             if self.modifiers:
@@ -220,7 +233,7 @@ class HSU_LinearArrayOperator(Operator):
             pass
 
         # Create an empty at the active object's location
-        self.empty = bpy.data.objects.new(f"{active_obj.name}-CIRC_ARR", None)
+        self.empty = bpy.data.objects.new(f"{active_obj.name}-LIN_ARR", None)
         self.empty.location = self.empty_location
         self.empty.empty_display_size = self.empty_size
         self.empty.scale = self.empty_scale
@@ -230,23 +243,28 @@ class HSU_LinearArrayOperator(Operator):
         # Parent the empty to the active object
         self.empty.parent = active_obj
 
+        cursor_location = context.scene.cursor.location
+        context.scene.cursor.location = active_obj.location
+
         # Loop through selected objects and add array modifier
         for obj in selected_objs:
-            if obj != active_obj:
-                # Add array modifier
-                array_modifier = obj.modifiers.new(name="Array", type='ARRAY')
-                array_modifier.count = self.instance_count
-                array_modifier.use_relative_offset = False
-                array_modifier.use_object_offset = True
-                array_modifier.offset_object = self.empty
-                self.modifiers.append(array_modifier)
+            # Add array modifier
+            array_modifier = obj.modifiers.new(name="Array", type='ARRAY')
+            array_modifier.count = self.instance_count
+            array_modifier.use_relative_offset = False
+            array_modifier.use_object_offset = True
+            array_modifier.offset_object = self.empty
+            self.modifiers.append(array_modifier)
 
-                # Set object origin
-                bpy.context.view_layer.objects.active = obj
-                bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
+            # Set object origin
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
 
-                # Make selected objects children of the active object
+            # Make selected objects children of the active object
+            if obj is not active_obj:
                 obj.parent = active_obj
+
+        context.scene.cursor.location = cursor_location
 
         return {'FINISHED'}
 

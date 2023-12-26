@@ -3,7 +3,7 @@ bl_info = {
     "description": "Some utility functions and operators for hard surface modeling.",
     "author": "P.Cy.113",
     "category": "Object",
-    "version": (0, 0, 1),
+    "version": (0, 0, 2),
     "blender": (4, 0, 2),
 }
 
@@ -78,7 +78,7 @@ def register():
     CONFIG = bpy.context.preferences.addons[NAME].preferences
 
     bpy.utils.register_class(HSU_CircularArrayOperator)
-    bpy.utils.register_class(HSU_LinearArrayOperator)
+    #bpy.utils.register_class(HSU_LinearArrayOperator)
 
 def unregister():
     #unregister_handler_if_registered(HSU_load_post, bpy.app.handlers.load_post)
@@ -88,4 +88,4 @@ def unregister():
     bpy.utils.unregister_class(HSU_Preferences)
 
     bpy.utils.unregister_class(HSU_CircularArrayOperator)
-    bpy.utils.unregister_class(HSU_LinearArrayOperator)
+    #bpy.utils.unregister_class(HSU_LinearArrayOperator)
