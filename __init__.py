@@ -4,7 +4,7 @@ bl_info = {
     "author": "P.Cy.113",
     "category": "Object",
     "version": (0, 0, 2),
-    "blender": (4, 0, 2),
+    "blender": (4, 0, 2)
 }
 
 import bpy
