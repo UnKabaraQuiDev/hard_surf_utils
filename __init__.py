@@ -1,0 +1,91 @@
+bl_info = {
+    "name": "Hard Surface Utils",
+    "description": "Some utility functions and operators for hard surface modeling.",
+    "author": "P.Cy.113",
+    "category": "Object",
+    "version": (0, 0, 1),
+    "blender": (4, 0, 2),
+}
+
+import bpy
+from .utils import *
+from .config import *
+from .array_ops import *
+
+NAME = __package__
+CONFIG: any
+
+previous_objects = None
+
+def load_previous_objects():
+    global previous_objects
+
+    if bpy.data.objects and not previous_objects:
+        print(f'Loading: {previous_objects}')
+        previous_objects = set(bpy.data.objects)
+
+def HSU_depsgraph_update_post(scene, depsgraph):
+    global CONFIG
+
+    # -- handling new object
+    global previous_objects
+    if previous_objects is not None:
+        current_objects = set(bpy.data.objects)
+        new_objects = current_objects - previous_objects
+        previous_objects = current_objects
+        if new_objects and CONFIG.shade_auto_smooth:
+            bpy.ops.object.shade_smooth(use_auto_smooth=True, auto_smooth_angle=CONFIG.shade_auto_smooth_angle)
+            return
+    else:
+        load_previous_objects()
+        return
+
+    if not bpy.context.object:
+        return
+    object = bpy.context.object
+
+    if CONFIG.weighted_normal_bottom:
+        if not object.modifiers:
+            return
+        modifiers = object.modifiers
+
+        for i in range(len(modifiers)):
+            modifier = modifiers[i]
+            if isinstance(modifier, bpy.types.WeightedNormalModifier) and 'fixed' not in modifier.name.lower():
+                object.modifiers.move(i, len(modifiers)-1)
+                return
+
+@bpy.app.handlers.persistent
+def HSU_load_post(file):
+    load_previous_objects()
+    register_handler_if_unregistered(HSU_depsgraph_update_post, bpy.app.handlers.depsgraph_update_post)
+
+@bpy.app.handlers.persistent
+def HSU_load_factory_post(file):
+    load_previous_objects()
+    register_handler_if_unregistered(HSU_depsgraph_update_post, bpy.app.handlers.depsgraph_update_post)
+
+
+
+def register():
+    register_handler_if_unregistered(HSU_load_post, bpy.app.handlers.load_post)
+    register_handler_if_unregistered(HSU_load_factory_post, bpy.app.handlers.load_factory_startup_post)
+    register_handler_if_unregistered(HSU_depsgraph_update_post, bpy.app.handlers.depsgraph_update_post)
+
+    bpy.utils.register_class(HSU_Preferences)
+
+    global CONFIG
+    CONFIG = bpy.context.preferences.addons[NAME].preferences
+
+    bpy.utils.register_class(HSU_CircularArrayOperator)
+    bpy.utils.register_class(HSU_LinearArrayOperator)
+
+def unregister():
+    #unregister_handler_if_registered(HSU_load_post, bpy.app.handlers.load_post)
+    #unregister_handler_if_registered(HSU_load_factory_post, bpy.app.handlers.load_factory_startup_post)
+    unregister_handler_if_registered(HSU_depsgraph_update_post, bpy.app.handlers.depsgraph_update_post)
+
+    bpy.utils.unregister_class(HSU_Preferences)
+
+    bpy.utils.unregister_class(HSU_CircularArrayOperator)
+    bpy.utils.unregister_class(HSU_LinearArrayOperator)
