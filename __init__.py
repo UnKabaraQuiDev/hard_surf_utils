@@ -51,7 +51,7 @@ def HSU_depsgraph_update_post(scene, depsgraph):
 
         for i in range(len(modifiers)):
             modifier = modifiers[i]
-            if isinstance(modifier, bpy.types.WeightedNormalModifier) and 'fixed' not in modifier.name.lower():
+            if isinstance(modifier, bpy.types.WeightedNormalModifier) and CONFIG.weighted_normal_exclude.lower() not in modifier.name.lower():
                 object.modifiers.move(i, len(modifiers)-1)
                 return
 
