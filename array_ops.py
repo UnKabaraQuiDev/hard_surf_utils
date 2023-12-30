@@ -13,19 +13,19 @@ v Correct angle sensibility (degrees)
 
 class HSU_CircularArrayOperator(Operator):
     bl_idname = "object.circular_array"
-    bl_label = "Circular Array Operator"
+    bl_label = "Circular Array"
     bl_description = "Create a circular array of selected objects around an empty"
     bl_options = {'REGISTER', 'UNDO'}
 
     # Properties
     instance_count: IntProperty(name="Count", default=3)
-    empty_location: FloatVectorProperty(name="Location", default=(0.0, 0.0, 0.0), subtype="XYZ")
     empty_size: FloatProperty(name="Size", default=1.0, min=0)
-    empty_scale: FloatVectorProperty(name="Scale", default=(1.0, 1.0, 1.0), subtype="XYZ")
     empty_rotation: FloatVectorProperty(name="Rotation", default=(0.0, 0.0, 0.0), subtype="EULER")
     
     axis_keys = {'X': (1, 0, 0), 'Y': (0, 1, 0), 'Z': (0, 0, 1)}
     rotation_axis = (0, 0, 0)
+    base_location = Vector((0, 0, 0))
+    old_mouse_region_x = 0
     modifiers = []
     empty = None
 
@@ -44,8 +44,6 @@ class HSU_CircularArrayOperator(Operator):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "instance_count")
-        layout.prop(self, "empty_location")
-        layout.prop(self, "empty_scale")
         layout.prop(self, "empty_rotation")
         layout.prop(self, "empty_size")
 
@@ -80,9 +78,8 @@ class HSU_CircularArrayOperator(Operator):
         if not self.empty:
             return
         
-        self.empty.location = self.empty_location
+        self.empty.location = self.base_location
         self.empty.empty_display_size = self.empty_size
-        self.empty.scale = self.empty_scale
         self.empty.rotation_euler = self.empty_rotation
 
         for modifier in self.modifiers:
@@ -94,6 +91,7 @@ class HSU_CircularArrayOperator(Operator):
         selected_objs = context.selected_objects
         if active_obj in selected_objs:
             selected_objs.remove(active_obj)
+        self.base_location = active_obj.location
 
         try:
             if self.modifiers:
@@ -105,9 +103,8 @@ class HSU_CircularArrayOperator(Operator):
 
         # Create an empty at the active object's location
         self.empty = bpy.data.objects.new(f"{active_obj.name}-CIRC_ARR", None)
-        self.empty.location = self.empty_location
+        self.empty.location = self.base_location
         self.empty.empty_display_size = self.empty_size
-        self.empty.scale = self.empty_scale
         self.empty.rotation_euler = self.empty_rotation
         context.collection.objects.link(self.empty)
 
@@ -127,12 +124,13 @@ class HSU_CircularArrayOperator(Operator):
             array_modifier.offset_object = self.empty
             self.modifiers.append(array_modifier)
 
+            # Make selected objects children of the active object
+            obj.parent = active_obj
+            obj.matrix_parent_inverse = active_obj.matrix_world.inverted()
+
             # Set object origin
             bpy.context.view_layer.objects.active = obj
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
-
-            # Make selected objects children of the active object
-            obj.parent = active_obj
 
         context.scene.cursor.location = cursor_location
 
@@ -140,7 +138,7 @@ class HSU_CircularArrayOperator(Operator):
     
 class HSU_LinearArrayOperator(Operator):
     bl_idname = "object.linear_array"
-    bl_label = "Linear Array Operator"
+    bl_label = "Linear Array"
     bl_description = "Create a linear array of selected objects to an empty"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -148,11 +146,11 @@ class HSU_LinearArrayOperator(Operator):
     instance_count: IntProperty(name="Count", default=3)
     empty_location: FloatVectorProperty(name="Location", default=(0.0, 0.0, 0.0), subtype="XYZ")
     empty_size: FloatProperty(name="Size", default=1.0, min=0)
-    empty_scale: FloatVectorProperty(name="Scale", default=(1.0, 1.0, 1.0), subtype="XYZ")
-    empty_rotation: FloatVectorProperty(name="Rotation", default=(0.0, 0.0, 0.0), subtype="EULER")
     
     axis_keys = {'X': (1, 0, 0), 'Y': (0, 1, 0), 'Z': (0, 0, 1)}
     location_axis = (0, 0, 0)
+    base_location = Vector((0, 0, 0))
+    old_mouse_region_x = 0
     modifiers = []
     empty = None
 
@@ -166,6 +164,7 @@ class HSU_LinearArrayOperator(Operator):
         print("Start")
 
     def __del__(self):
+        self.base_location = Vector((0, 0, 0))
         self.empty_location = Vector((0, 0, 0))
         print("End")
 
@@ -173,14 +172,13 @@ class HSU_LinearArrayOperator(Operator):
         layout = self.layout
         layout.prop(self, "instance_count")
         layout.prop(self, "empty_location")
-        layout.prop(self, "empty_scale")
-        layout.prop(self, "empty_rotation")
         layout.prop(self, "empty_size")
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
             diff = self.old_mouse_region_x-event.mouse_region_x
-            self.empty_location = self.empty_location+Vector(tuple([diff*(0.1 if event.shift else 0.5)*x for x in self.location_axis]))
+            self.empty_location = Vector(tuple([-diff*(0.1 if event.shift else 0.5)*x for x in self.location_axis]))
+            print(f"{self.base_location} {self.empty_location} + {self.old_mouse_region_x} + {event.mouse_region_x} to {self.location_axis}")
         elif event.type == 'WHEELUPMOUSE':
             self.instance_count += 1
         elif event.type == 'WHEELDOWNMOUSE':
@@ -201,16 +199,15 @@ class HSU_LinearArrayOperator(Operator):
         # self.rotation_axis = context.region_data.view_rotation.axis*Vector((0, 0, -1))
         wm.modal_handler_add(self)
         self.old_mouse_region_x = event.mouse_region_x
+        self.base_location = context.active_object.location
         return {'RUNNING_MODAL'}
 
     def update(self, context):
         if not self.empty:
             return
         
-        self.empty.location = self.empty_location
+        self.empty.location = self.base_location+self.empty_location
         self.empty.empty_display_size = self.empty_size
-        self.empty.scale = self.empty_scale
-        self.empty.rotation_euler = self.empty_rotation
 
         for modifier in self.modifiers:
             modifier.count = self.instance_count
@@ -220,9 +217,9 @@ class HSU_LinearArrayOperator(Operator):
         selected_objs = context.selected_objects
         if active_obj is None:
             active_obj = selected_objs[0]
-        #self.empty_location = active_obj.location
         if active_obj not in selected_objs:
             selected_objs.add(active_obj)
+        self.base_location = active_obj.location
 
         try:
             if self.modifiers:
@@ -234,10 +231,8 @@ class HSU_LinearArrayOperator(Operator):
 
         # Create an empty at the active object's location
         self.empty = bpy.data.objects.new(f"{active_obj.name}-LIN_ARR", None)
-        self.empty.location = self.empty_location
+        self.empty.location = self.base_location+self.empty_location
         self.empty.empty_display_size = self.empty_size
-        self.empty.scale = self.empty_scale
-        self.empty.rotation_euler = self.empty_rotation
         context.collection.objects.link(self.empty)
 
         # Parent the empty to the active object
@@ -256,13 +251,14 @@ class HSU_LinearArrayOperator(Operator):
             array_modifier.offset_object = self.empty
             self.modifiers.append(array_modifier)
 
-            # Set object origin
-            bpy.context.view_layer.objects.active = obj
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
-
             # Make selected objects children of the active object
             if obj is not active_obj:
                 obj.parent = active_obj
+                obj.matrix_parent_inverse = active_obj.matrix_world.inverted()
+
+            # Set object origin
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
 
         context.scene.cursor.location = cursor_location
 

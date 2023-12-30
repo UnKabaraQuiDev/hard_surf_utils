@@ -3,7 +3,7 @@ bl_info = {
     "description": "Some utility functions and operators for hard surface modeling.",
     "author": "P.Cy.113",
     "category": "Object",
-    "version": (0, 0, 2),
+    "version": (0, 0, 3),
     "blender": (4, 0, 2)
 }
 
@@ -11,6 +11,7 @@ import bpy
 from .utils import *
 from .config import *
 from .array_ops import *
+from .menus import *
 
 NAME = __package__
 CONFIG: any
@@ -78,7 +79,10 @@ def register():
     CONFIG = bpy.context.preferences.addons[NAME].preferences
 
     bpy.utils.register_class(HSU_CircularArrayOperator)
-    #bpy.utils.register_class(HSU_LinearArrayOperator)
+    bpy.utils.register_class(HSU_LinearArrayOperator)
+
+    bpy.utils.register_class(HSU_ObjectContextMenu)
+    bpy.types.VIEW3D_MT_object_context_menu.append(draw_object_contect_menu)
 
 def unregister():
     #unregister_handler_if_registered(HSU_load_post, bpy.app.handlers.load_post)
@@ -88,4 +92,7 @@ def unregister():
     bpy.utils.unregister_class(HSU_Preferences)
 
     bpy.utils.unregister_class(HSU_CircularArrayOperator)
-    #bpy.utils.unregister_class(HSU_LinearArrayOperator)
+    bpy.utils.unregister_class(HSU_LinearArrayOperator)
+
+    bpy.utils.unregister_class(HSU_ObjectContextMenu)
+    bpy.types.VIEW3D_MT_object_context_menu.remove(draw_object_contect_menu)
