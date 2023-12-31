@@ -21,7 +21,7 @@ Automatically shades the new object auto smooth.
 Pushes the all weighted normal modifiers to the bottom of the stack. Uness their name contains the exclusion filter.
 *See addon preferences to enable/disable and change exclusion filter*
 
-## Linear Array (coming soon)
+## Linear Array
 Creates an array from the selection of object.
 
 Keymap:
