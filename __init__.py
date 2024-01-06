@@ -12,6 +12,7 @@ from .utils import *
 from .config import *
 from .array_ops import *
 from .menus import *
+from .modifier_cleanup import *
 
 NAME = __package__
 CONFIG: any
@@ -41,6 +42,7 @@ def HSU_depsgraph_update_post(scene, depsgraph):
         load_previous_objects()
         return
 
+    # Weighted normal
     if not bpy.context.object:
         return
     object = bpy.context.object
@@ -80,9 +82,11 @@ def register():
 
     bpy.utils.register_class(HSU_CircularArrayOperator)
     bpy.utils.register_class(HSU_LinearArrayOperator)
+    bpy.utils.register_class(HSU_ModifierCleanup)
 
     bpy.utils.register_class(HSU_ObjectContextMenu)
     bpy.types.VIEW3D_MT_object_context_menu.append(draw_object_contect_menu)
+
 
 def unregister():
     #unregister_handler_if_registered(HSU_load_post, bpy.app.handlers.load_post)
@@ -93,6 +97,7 @@ def unregister():
 
     bpy.utils.unregister_class(HSU_CircularArrayOperator)
     bpy.utils.unregister_class(HSU_LinearArrayOperator)
+    bpy.utils.unregister_class(HSU_ModifierCleanup)
 
     bpy.utils.unregister_class(HSU_ObjectContextMenu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(draw_object_contect_menu)

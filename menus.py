@@ -10,6 +10,7 @@ class HSU_ObjectContextMenu(Menu):
 
         layout.operator("object.circular_array", text="Circular Array")
         layout.operator("object.linear_array", text="Linear Array")
+        layout.operator("object.modifier_cleanup", text="Modifier Cleanup")
 
 def draw_object_contect_menu(self, context):
     layout = self.layout

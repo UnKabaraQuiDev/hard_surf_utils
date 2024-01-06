@@ -7,15 +7,13 @@ from mathutils import Vector
 """
 TODO:
 O Write angle and count to top
-v Correct angle multiplication
-v Correct angle sensibility (degrees)
 """
 
 class HSU_CircularArrayOperator(Operator):
     bl_idname = "object.circular_array"
     bl_label = "Circular Array"
     bl_description = "Create a circular array of selected objects around an empty"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'UNDO'}
 
     # Properties
     instance_count: IntProperty(name="Count", default=3)
@@ -41,13 +39,15 @@ class HSU_CircularArrayOperator(Operator):
     def __del__(self):
         #print("End")
         pass
-
+    
+    """
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "instance_count")
         layout.prop(self, "empty_rotation")
         layout.prop(self, "empty_size")
-
+    """
+        
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
             self.empty_rotation = tuple([math.radians(event.mouse_region_x*(0.1 if event.shift else 0.5)*x) for x in self.rotation_axis])
@@ -169,11 +169,13 @@ class HSU_LinearArrayOperator(Operator):
         self.empty_location = Vector((0, 0, 0))
         #print("End")
 
+    """
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "instance_count")
         layout.prop(self, "empty_location")
         layout.prop(self, "empty_size")
+    """
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
