@@ -36,10 +36,11 @@ class HSU_CircularArrayOperator(Operator):
     def __init__(self):
         self.modifiers = []
         self.empty = None
-        print("Start")
+        #print("Start")
 
     def __del__(self):
-        print("End")
+        #print("End")
+        pass
 
     def draw(self, context):
         layout = self.layout
@@ -50,7 +51,7 @@ class HSU_CircularArrayOperator(Operator):
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
             self.empty_rotation = tuple([math.radians(event.mouse_region_x*(0.1 if event.shift else 0.5)*x) for x in self.rotation_axis])
-            print(f"moved: {self.empty_rotation}")
+            #print(f"moved: {self.empty_rotation}")
         elif event.type == 'WHEELUPMOUSE':
             self.instance_count += 1
             self.empty_rotation = tuple([math.radians(360/self.instance_count*x) for x in self.rotation_axis])
@@ -161,12 +162,12 @@ class HSU_LinearArrayOperator(Operator):
     def __init__(self):
         self.modifiers = []
         self.empty = None
-        print("Start")
+        #print("Start")
 
     def __del__(self):
         self.base_location = Vector((0, 0, 0))
         self.empty_location = Vector((0, 0, 0))
-        print("End")
+        #print("End")
 
     def draw(self, context):
         layout = self.layout
@@ -178,7 +179,7 @@ class HSU_LinearArrayOperator(Operator):
         if event.type == 'MOUSEMOVE':
             diff = self.old_mouse_region_x-event.mouse_region_x
             self.empty_location = Vector(tuple([-diff*(0.1 if event.shift else 0.5)*x for x in self.location_axis]))
-            print(f"{self.base_location} {self.empty_location} + {self.old_mouse_region_x} + {event.mouse_region_x} to {self.location_axis}")
+            #print(f"{self.base_location} {self.empty_location} + {self.old_mouse_region_x} + {event.mouse_region_x} to {self.location_axis}")
         elif event.type == 'WHEELUPMOUSE':
             self.instance_count += 1
         elif event.type == 'WHEELDOWNMOUSE':
