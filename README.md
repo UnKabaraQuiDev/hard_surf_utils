@@ -30,3 +30,8 @@ Keymap:
 - Mouse X: change offset (empty location)
 - Left click: Apply
 - Right click, ESC: Cancel
+
+## Modifier Cleanup
+Removes any unused modifier, like:
+- Array Modifier with no offset
+- Boolean Modifier with no target
