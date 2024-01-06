@@ -3,7 +3,7 @@ bl_info = {
     "description": "Some utility functions and operators for hard surface modeling.",
     "author": "P.Cy.113",
     "category": "Object",
-    "version": (0, 0, 3),
+    "version": (0, 0, 4),
     "blender": (4, 0, 2)
 }
 
