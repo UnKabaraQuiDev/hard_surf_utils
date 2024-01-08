@@ -29,7 +29,7 @@ class HSU_CircularArrayOperator(Operator):
 
     @classmethod
     def poll(cls, context):
-        return (context.active_object is not None and len(context.selected_objects) > 1)
+        return (context.active_object is not None or len(context.selected_objects) > 1)
 
     def __init__(self):
         self.modifiers = []
@@ -54,9 +54,13 @@ class HSU_CircularArrayOperator(Operator):
             #print(f"moved: {self.empty_rotation}")
         elif event.type == 'WHEELUPMOUSE':
             self.instance_count += 1
+            if self.instance_count <= 0:
+                self.instance_count = 1
             self.empty_rotation = tuple([math.radians(360/self.instance_count*x) for x in self.rotation_axis])
         elif event.type == 'WHEELDOWNMOUSE':
             self.instance_count -= 1
+            if self.instance_count <= 0:
+                self.instance_count = 1
             self.empty_rotation = tuple([math.radians(360/self.instance_count*x) for x in self.rotation_axis])
         elif event.type in {'X', 'Y', 'Z'}:
             self.rotation_axis = self.axis_keys[event.type]
@@ -94,6 +98,9 @@ class HSU_CircularArrayOperator(Operator):
             selected_objs.remove(active_obj)
         self.base_location = active_obj.location
 
+        if len(selected_objs) == 0 and active_obj:
+            selected_objs.append(active_obj)
+
         try:
             if self.modifiers:
                 self.update(context)
@@ -126,8 +133,9 @@ class HSU_CircularArrayOperator(Operator):
             self.modifiers.append(array_modifier)
 
             # Make selected objects children of the active object
-            obj.parent = active_obj
-            obj.matrix_parent_inverse = active_obj.matrix_world.inverted()
+            if obj is not active_obj:
+                obj.parent = active_obj
+                obj.matrix_parent_inverse = active_obj.matrix_world.inverted()
 
             # Set object origin
             bpy.context.view_layer.objects.active = obj
@@ -184,8 +192,12 @@ class HSU_LinearArrayOperator(Operator):
             #print(f"{self.base_location} {self.empty_location} + {self.old_mouse_region_x} + {event.mouse_region_x} to {self.location_axis}")
         elif event.type == 'WHEELUPMOUSE':
             self.instance_count += 1
+            if self.instance_count <= 0:
+                self.instance_count = 1
         elif event.type == 'WHEELDOWNMOUSE':
             self.instance_count -= 1
+            if self.instance_count <= 0:
+                self.instance_count = 1
         elif event.type in {'X', 'Y', 'Z'}:
             self.location_axis = self.axis_keys[event.type]
         elif event.type in {'ESC', 'RIGHTMOUSE'}:  # Cancel
