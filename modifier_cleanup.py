@@ -1,10 +1,42 @@
 import bpy
-from bpy.types import Operator, BooleanModifier, ArrayModifier
+from bpy.types import Operator, BooleanModifier, ArrayModifier, WeightedNormalModifier
 
-"""
-TODO:
-O Write angle and count to top
-"""
+
+class HSU_AddWeightedNormalModifier(Operator):
+    bl_idname = "object.add_weighted_normal_modifier"
+    bl_label = "Add Weighted Normal Modifier"
+    bl_description = "Adds a weighted normal modifier to the selected objects"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.active_object is not None or len(context.selected_objects) > 0)
+    
+    def execute(self, context):
+        # Get active object and selected objects
+        active_obj = context.active_object
+        selected_objs = context.selected_objects
+        if active_obj not in selected_objs:
+            selected_objs.add(active_obj)
+
+        i = 0
+
+        for obj in selected_objs:
+            modifiers = obj.modifiers
+            if modifiers is None:
+                obj.modifiers = []
+                modifiers = obj.modifiers
+
+            contains = sum(1 if isinstance(m, WeightedNormalModifier) else 0 for m in modifiers) > 0
+            if not contains:
+                wnm = modifiers.new('Weighted Normal', "WEIGHTED_NORMAL")
+                wnm.keep_sharp = True
+                
+                i += 1
+
+        self.report({'INFO'}, f'Added {i} modifier(s) on {len(selected_objs)} object(s).')
+
+        return {'FINISHED'}
 
 class HSU_ModifierCleanup(Operator):
     bl_idname = "object.modifier_cleanup"

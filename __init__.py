@@ -83,6 +83,7 @@ def register():
     bpy.utils.register_class(HSU_CircularArrayOperator)
     bpy.utils.register_class(HSU_LinearArrayOperator)
     bpy.utils.register_class(HSU_ModifierCleanup)
+    bpy.utils.register_class(HSU_AddWeightedNormalModifier)
 
     bpy.utils.register_class(HSU_ObjectContextMenu)
     bpy.types.VIEW3D_MT_object_context_menu.append(draw_object_contect_menu)
@@ -98,6 +99,7 @@ def unregister():
     bpy.utils.unregister_class(HSU_CircularArrayOperator)
     bpy.utils.unregister_class(HSU_LinearArrayOperator)
     bpy.utils.unregister_class(HSU_ModifierCleanup)
+    bpy.utils.unregister_class(HSU_AddWeightedNormalModifier)
 
     bpy.utils.unregister_class(HSU_ObjectContextMenu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(draw_object_contect_menu)
