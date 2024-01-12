@@ -35,3 +35,6 @@ Keymap:
 Removes any unused modifier, like:
 - Array Modifier with no offset
 - Boolean Modifier with no target
+
+## Add Weighted Modifier
+Adds a weighted modifier to the selected object(s)
