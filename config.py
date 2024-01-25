@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import AddonPreferences
-from bpy.props import FloatProperty, StringProperty, BoolProperty
+from bpy.props import FloatProperty, StringProperty, BoolProperty, FloatVectorProperty
 from .__init__ import NAME
 
 
@@ -49,6 +49,26 @@ class HSU_Preferences(AddonPreferences):
         update=lambda self, context: set_prop('weighted_normal_exclude', self.weighted_normal_exclude)
     )
 
+    overlay_color1: FloatVectorProperty(
+        name="Overlay color 1",
+        description="",
+        default=(0, 1, 0, 1),
+        min=0,
+        max=1,
+        size=4,
+        subtype="COLOR"
+    )
+
+    overlay_color2: FloatVectorProperty(
+        name="Overlay color 2",
+        description="",
+        default=(0, 0, 1, 1),
+        min=0,
+        max=1,
+        size=4,
+        subtype="COLOR"
+    )
+
     # Draw the preferences in the addon settings
     def draw(self, context):
         layout = self.layout
@@ -64,4 +84,8 @@ class HSU_Preferences(AddonPreferences):
         row = layout.row(heading="Weighted Normals", align=False)
         row.prop(self, "weighted_normal_bottom")
         row.prop(self, "weighted_normal_exclude")
+
+        row = layout.row(heading="Overlay options", align=False)
+        row.prop(self, "overlay_color1")
+        row.prop(self, "overlay_color2")
 

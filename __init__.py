@@ -3,19 +3,23 @@ bl_info = {
     "description": "Some utility functions and operators for hard surface modeling.",
     "author": "P.Cy.113",
     "category": "Object",
-    "version": (0, 0, 4),
+    "version": (0, 0, 5),
     "blender": (4, 0, 2)
 }
 
 import bpy
 from .utils import *
 from .config import *
+from .overlay_utils import *
+
 from .array_ops import *
-from .menus import *
 from .modifier_cleanup import *
+from .boolean_ops import *
+
+from .menus import *
 
 NAME = __package__
-CONFIG: any
+CONFIG: any = None
 
 previous_objects = None
 
@@ -28,6 +32,12 @@ def load_previous_objects():
 
 def HSU_depsgraph_update_post(scene, depsgraph):
     global CONFIG
+
+    #if CONFIG is None:
+    #    return
+
+    if bpy.context and bpy.context.active_object and bpy.context.active_object.mode != "OBJECT":
+        return
 
     # -- handling new object
     global previous_objects
@@ -79,6 +89,10 @@ def register():
 
     global CONFIG
     CONFIG = bpy.context.preferences.addons[NAME].preferences
+    print(f'Config for {NAME}: {CONFIG}')
+
+    overlay_utils.register()
+    print(f'Overlay for {NAME}: {overlay_utils.OVERLAY}')
 
     bpy.utils.register_class(HSU_CircularArrayOperator)
     bpy.utils.register_class(HSU_LinearArrayOperator)
@@ -87,6 +101,8 @@ def register():
 
     bpy.utils.register_class(HSU_ObjectContextMenu)
     bpy.types.VIEW3D_MT_object_context_menu.append(draw_object_contect_menu)
+
+    bpy.utils.register_class(HSU_BooleanCubeOperator)
 
 
 def unregister():
@@ -103,3 +119,7 @@ def unregister():
 
     bpy.utils.unregister_class(HSU_ObjectContextMenu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(draw_object_contect_menu)
+
+    bpy.utils.unregister_class(HSU_BooleanCubeOperator)
+
+    overlay_utils.unregister()
