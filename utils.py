@@ -44,6 +44,9 @@ def find_area(): # return first viewport area
     except:
         return None
 
+def get_corner_bounds(origin, all_points):
+    return get_bounds([x.copy() - origin for x in all_points])
+
 def get_bounds(all_points):
     # Initialize min and max values for each axis
     min_values = [float('inf')] * 3
@@ -61,46 +64,6 @@ def get_bounds(all_points):
     return tuple(bounds)
 
 def dist(vec1: Vector, vec2: Vector) -> float:
+    if vec1 is None or vec2 is None:
+        return float('inf')
     return (vec2 - vec1).length
-
-def array_ray_cast(objs, matrix, ray_target, ray_origin):
-    min: any = float("inf")
-
-    location: any = None
-    normal: any = None
-    face_index: any = None
-    object: any = None
-
-    for obj in objs:
-        loc, norm, fi = obj_ray_cast(obj, matrix, ray_target, ray_origin)
-        if loc is None:
-            continue
-        if dist(ray_origin, loc) < min:
-            min = dist(ray_origin, loc)
-            location = loc
-            normal = norm
-            face_index = fi
-            object = obj
-    if location is not None:
-        return (min, location, normal, face_index, object)
-    else:
-        return None
-    
-def obj_ray_cast(obj, matrix, ray_target, ray_origin):
-    """Wrapper for ray casting that moves the ray into object space"""
-
-    print(f'Raycasting: from: {ray_origin}, dir: {ray_target}, for obj: {obj}')
-
-    # get the ray relative to the object
-    matrix_inv = matrix.inverted()
-    ray_origin_obj = matrix_inv @ ray_origin
-    ray_target_obj = matrix_inv @ ray_target
-    ray_direction_obj = ray_target_obj - ray_origin_obj
-
-    # cast the ray
-    success, location, normal, face_index = obj.ray_cast(ray_origin_obj, ray_direction_obj)
-
-    if success:
-        return (location, normal, face_index)
-    else:
-        return (None, None, None)

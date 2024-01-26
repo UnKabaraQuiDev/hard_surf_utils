@@ -4,9 +4,11 @@ from bpy.props import FloatVectorProperty, FloatProperty, IntProperty
 from math import radians
 from mathutils import Vector, Euler
 from bpy_extras import view3d_utils
-from .utils import find_area, array_ray_cast, get_bounds, get_grid_pos
+from .utils import find_area, get_bounds, get_corner_bounds
+from .raycast_utils import array_raycast
 from .raycast_utils import *
 import bmesh
+from .mesh_utils import create_edge_cube
 
 class HSU_BooleanCubeOperator(Operator):
     bl_idname = "object.quick_boolean_cube"
@@ -46,6 +48,8 @@ class HSU_BooleanCubeOperator(Operator):
         self.hit_point = None
 
     def update_overlay(self):
+        if self.object:
+            self.object.scale = get_corner_bounds(self.ctrl_points[0], self.ctrl_points)
         return
         self.overlay.visible = True
         self.overlay.direction = self.direction
@@ -72,18 +76,22 @@ class HSU_BooleanCubeOperator(Operator):
             return {'CANCELLED'}
         
         elif event.type == "MOUSEMOVE":
-            pass
+            self.update_overlay()
 
         elif event.type in ['MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE']:
             return {'PASS_THROUGH'}
         
         elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
            if self.step == 0: # first point
-                result, location, normal, index, object, matrix = scene_raycast(context, scene, event.mouse_region_x, event.mouse_region_y)
+                result, distance, location, normal, face_index, object, ray_origin, ray_dir = array_raycast(self.objects, context, event.mouse_region_x, event.mouse_region_y)
+                print(f'Distance: {result} {distance} {location}')
                 if result:
-                    # create a cube
-                    bpy.ops.mesh.primitive_cube_add(size=1, location=location)
-                    ob = bpy.context.object
+                    # add first control point
+                    self.ctrl_points = [location]
+
+                    self.object = create_edge_cube("noooo", context, location=location)
+                    
+                    self.step += 1
                 else:
                     self.report({'ERROR'}, 'No surface hit in selection')
            elif self.step == 1: # second point

@@ -5,8 +5,34 @@ import math
 from bpy_extras.view3d_utils import region_2d_to_vector_3d, region_2d_to_origin_3d
 from .grid_utils import GetGridHitPoint, isGridFrontal
 from .math_utils import LinePlaneCollision
+from .utils import dist
 
-def scene_raycast(context, scene, x, y):
+def array_raycast(arrays, context, x, y):
+    min: any = float("inf")
+
+    location: any = None
+    normal: any = None
+    face_index: any = None
+    object: any = None
+    ray_origin: any = None
+    ray_dir: any = None
+
+    for obj in arrays:
+        result, dist, loc, norm, fi, obj, origin, dir = object_raycast(obj, context, x, y)
+        if not result:
+            continue
+        if dist < min:
+            min = dist
+            location = loc
+            normal = norm
+            face_index = fi
+            object = obj
+            ray_origin = origin
+            ray_dir = dir
+
+    return (location is not None, min, location, normal, face_index, object, ray_origin, ray_dir)
+
+def object_raycast(obj, context, x, y):
     region = context.region
     rv3d = context.region_data
     coord = (x, y)
@@ -19,12 +45,14 @@ def scene_raycast(context, scene, x, y):
     view_matrix = rv3d.view_matrix
     view_matrix_inv = view_matrix.inverted()
 
-    ray_dir = view_matrix_inv @ view_vector
+    # ray_dir = (view_matrix_inv @ view_vector).normalized()
 
     # Perform the actual raycast
-    result, location, normal, index, object, matrix = scene.ray_cast(context.depsgraph, ray_origin, ray_dir)
+    result, location, normal, index = obj.ray_cast(ray_origin, view_vector)
 
-    return result, location, normal, index, object, matrix
+    print(f'Check for {obj} from {ray_origin} to {view_vector} ({view_matrix_inv}) => {result} {location}')
+
+    return result, dist(ray_origin, location), location, normal, index, obj, ray_origin, view_vector
 
 # Get location in matrix space
 def GetPlaneLocation(context, coord, matrix):
