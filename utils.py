@@ -3,7 +3,41 @@ import mathutils
 from mathutils import Vector
 from bpy_extras import view3d_utils
 
-def get_grid_pos(context, event):
+def vector_to_euler(rotation_vector):
+    rotation_vector = rotation_vector.normalized()
+    rotation_quaternion = rotation_vector.to_track_quat('Z', 'Y')
+    rotation_euler = rotation_quaternion.to_euler()
+    return rotation_euler
+
+def vector_to_quaternion(rotation_vector):
+    rotation_axis = rotation_vector.normalized()
+    rotation_angle = rotation_vector.length
+    return mathutils.Quaternion(rotation_axis, rotation_angle)
+
+def get_viewport_transparent_material(name):
+    material = bpy.data.materials.get(name)
+    if material is not None:
+        return material
+
+    # Create a new material
+    material = bpy.data.materials.new(name=name)
+
+    # Set the material to use nodes (for more advanced material setups)
+    material.use_nodes = False
+
+    # Access the material nodes
+    nodes = material.node_tree.nodes
+
+    # Clear default nodes
+    for node in nodes:
+        nodes.remove(node)
+
+    from .config import CONFIG
+    
+    material.diffuse_color = CONFIG.cutter_color
+    return material
+
+def get_grid_pos(context, event, normal: Vector=Vector((0, 0, 1))):
     viewport_region = context.region
     viewport_region_data = context.space_data.region_3d
     viewport_matrix = viewport_region_data.view_matrix.inverted()
@@ -14,16 +48,27 @@ def get_grid_pos(context, event):
     ray_depth = viewport_matrix @ Vector((0,0,-100000))
     
     # Get the 3D vector position of the mouse
-    ray_end = view3d_utils.region_2d_to_location_3d(viewport_region,viewport_region_data, (event.mouse_region_x, event.mouse_region_y), ray_depth )
+    ray_end = view3d_utils.region_2d_to_location_3d(viewport_region,viewport_region_data, (event.mouse_region_x, event.mouse_region_y), ray_depth)
     
     # A triangle on the grid plane. We use these 3 points to define a plane on the grid
-    point_1 = Vector((0,0,0))
-    point_2 = Vector((0,1,0))
-    point_3 = Vector((1,0,0))
+    # point_1 = Vector((0,0,0))
+    # point_2 = Vector((0,1,0))
+    # point_3 = Vector((1,0,0))
+
+    # Find two perpendicular vectors to the normal
+    tangent_1 = normal.orthogonal().normalized()
+    tangent_2 = normal.cross(tangent_1).normalized()
+
+    # Define three points on the XY plane
+    point_1 = Vector((0, 0, 0))
+    point_2 = point_1 + tangent_1
+    point_3 = point_1 + tangent_2
     
+    print(f'from {normal} : {point_1} {point_2} {point_3}')
+
     # Create a 3D position on the grid under the mouse cursor using the triangle as a grid plane
     # and the ray cast from the camera
-    position_on_grid = mathutils.geometry.intersect_ray_tri(point_1,point_2,point_3,ray_end,ray_start,False )
+    position_on_grid = mathutils.geometry.intersect_ray_tri(point_1,point_2,point_3,ray_end,ray_start,False)
     
     return position_on_grid
 
@@ -45,9 +90,12 @@ def find_area(): # return first viewport area
         return None
 
 def get_corner_bounds(origin, all_points):
-    return get_bounds([x.copy() - origin for x in all_points])
+    print(f'origin: {origin} {all_points}')
+    return get_bounds([(x.copy() - origin) for x in all_points])
 
 def get_bounds(all_points):
+    print(f'all_points: {all_points}')
+
     # Initialize min and max values for each axis
     min_values = [float('inf')] * 3
     max_values = [float('-inf')] * 3

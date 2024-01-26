@@ -4,11 +4,13 @@ from bpy.props import FloatVectorProperty, FloatProperty, IntProperty
 from math import radians
 from mathutils import Vector, Euler
 from bpy_extras import view3d_utils
-from .utils import find_area, get_bounds, get_corner_bounds
+from .utils import get_grid_pos, get_bounds, get_corner_bounds, get_viewport_transparent_material, vector_to_euler
 from .raycast_utils import array_raycast
 from .raycast_utils import *
 import bmesh
 from .mesh_utils import create_edge_cube
+
+VIEWPORT_MATERIAL = "TRANSP_VIEWPORT"
 
 class HSU_BooleanCubeOperator(Operator):
     bl_idname = "object.quick_boolean_cube"
@@ -21,9 +23,11 @@ class HSU_BooleanCubeOperator(Operator):
     ctrl_points = []
     objects = []
     direction = None
+    perpendicular_direction = None
     step = 0
-    mesh = None
+    cutter = None
     hit_point = None
+    overlay = None
 
     @classmethod
     def poll(cls, context):
@@ -44,12 +48,14 @@ class HSU_BooleanCubeOperator(Operator):
         self.ctrl_points = []
         self.objects = []
         self.direction = None
-        self.mesh = None
+        self.perpendicular_direction = None
+        self.cutter = None
         self.hit_point = None
 
     def update_overlay(self):
-        if self.object:
-            self.object.scale = get_corner_bounds(self.ctrl_points[0], self.ctrl_points)
+        if self.cutter:
+            self.cutter.scale = get_corner_bounds(self.ctrl_points[0], self.ctrl_points)
+        self.overlay.points = self.ctrl_points
         return
         self.overlay.visible = True
         self.overlay.direction = self.direction
@@ -75,7 +81,19 @@ class HSU_BooleanCubeOperator(Operator):
         if event.type in ['ESC', 'RIGHTMOUSE']:  # Cancel
             return {'CANCELLED'}
         
-        elif event.type == "MOUSEMOVE":
+        elif event.type in ['MOUSEMOVE', 'INBETWEEN_MOUSEMOVE']:
+            if self.step == 0:
+                pass
+            elif self.step == 1:
+                loc = get_grid_pos(context, event, self.direction)
+                if loc is not None:
+                    self.ctrl_points[-1] = loc
+                    print(f'updated {loc} {self.ctrl_points}')
+            elif self.step == 2:
+                loc = get_grid_pos(context, event, self.perpendicular_direction)
+                if loc is not None:
+                    self.ctrl_points[-1] = loc
+                    print(f'updated {loc} {self.ctrl_points}')
             self.update_overlay()
 
         elif event.type in ['MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE']:
@@ -87,24 +105,42 @@ class HSU_BooleanCubeOperator(Operator):
                 print(f'Distance: {result} {distance} {location}')
                 if result:
                     # add first control point
-                    self.ctrl_points = [location]
+                    self.ctrl_points = [location, location.copy()] # fix control point and add the second one
+                    self.direction = ray_dir
 
-                    self.object = create_edge_cube("noooo", context, location=location)
+                    self.cutter = create_edge_cube("noooo", context, location=location, rotation=vector_to_euler(self.direction))
                     
-                    self.step += 1
+                    self.cutter.data.materials.clear()
+                    global VIEWPORT_MATERIAL
+                    self.cutter.data.materials.append(get_viewport_transparent_material(VIEWPORT_MATERIAL))
+                    self.cutter.hide_render = True
+                    context.view_layer.update()
+
+                    self.step = 1
                 else:
-                    self.report({'ERROR'}, 'No surface hit in selection')
+                    self.report({'WARNING'}, 'No surface hit in selection')
+
            elif self.step == 1: # second point
-               pass
+                loc = get_grid_pos(context, event, self.direction)
+                if loc is not None:
+                    self.ctrl_points.append(loc) # fix second point and add a 3rd one
+                    print(f'set second point')
+                    self.step = 2
+                else:
+                    self.report({'WARNING'}, 'Out of bounds')
+                self.perpendicular_direction = self.direction.copy().cross(Vector((0, 0, 1)))
+                print(f'perp {self.perpendicular_direction} dir {self.direction}')
+
            elif self.step == 2: # depth
-               pass
-                
-        if event.type == 'RET':
-            return {'FINISHED'}
+                loc = get_grid_pos(context, event, self.perpendicular_direction)
+                if loc is not None:
+                    self.ctrl_points[-1] = loc
+                    self.update_overlay()
+                    return {'FINISHED'}
+                else:
+                    self.report({'WARNING'}, 'Out of bounds')
         
         print(self.ctrl_points)
-
-        self.update_overlay()
 
         return {'RUNNING_MODAL'}
     
@@ -114,8 +150,13 @@ class HSU_BooleanCubeOperator(Operator):
 
         self.objects = context.selected_objects
 
+        from .overlay_utils import OVERLAY
+        self.overlay = OVERLAY
+
         self.prev_mouse_region_x = event.mouse_region_x
         self.prev_mouse_region_y = event.mouse_region_y
+
+        self.overlay.visible = True
 
         print(self.objects)
 

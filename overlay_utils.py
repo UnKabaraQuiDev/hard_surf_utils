@@ -1,5 +1,4 @@
 import bpy
-import bgl
 import gpu
 from gpu_extras.batch import batch_for_shader
 import bpy_extras
@@ -15,17 +14,30 @@ CUBE_COORDS = (
     (-1, +1, +1), (+1, +1, +1))
 """
 
-CUBE_COORDS = (
-    (0, 0, 0), (1, 0, 0),
-    (0, 1, 0), (1, 1, 0),
-    (0, 0, 1), (1, 0, 1),
-    (0, 1, 1), (1, 1, 1))
+CUBE_COORDS = [
+    Vector((1, 1, 1)),
+    Vector((1, 1, 0)),
+    Vector((1, 0, 1)),
+    Vector((1, 0, 0)),
+    Vector((0, 1, 1)),
+    Vector((0, 1, 0)),
+    Vector((0, 0, 1)),
+    Vector((0, 0, 0))]
 
-
-CUBE_INDICES = (
-    (0, 1), (0, 2), (1, 3), (2, 3),
-    (4, 5), (4, 6), (5, 7), (6, 7),
-    (0, 4), (1, 5), (2, 6), (3, 7))
+TRIANGLE_INDICES = [
+    (0, 1, 3),  # Triangle 1
+    (0, 3, 2),  # Triangle 2
+    (4, 5, 7),  # Triangle 3
+    (4, 7, 6),  # Triangle 4
+    (0, 1, 5),  # Triangle 5
+    (0, 5, 4),  # Triangle 6
+    (2, 3, 7),  # Triangle 7
+    (2, 7, 6),  # Triangle 8
+    (0, 2, 6),  # Triangle 9
+    (0, 6, 4),  # Triangle 10
+    (1, 3, 7),  # Triangle 11
+    (1, 7, 5)   # Triangle 12
+]
 
 def rotate_point(point, angles):
     x, y, z = point
@@ -76,43 +88,29 @@ class HSU_Overlay():
     def unregister(self):
         bpy.types.SpaceView3D.draw_handler_remove(self.handle, 'WINDOW')
 
-    def draw_square_around_vertex(self, context, vertex, region):
-        rv3d = context.space_data.region_3d
+    def draw_cube_around_vertex(self, vertex, radius):
+        rv3d = bpy.context.space_data.region_3d
+        region = bpy.context.region
 
         # Convert 3D vertex coordinates to 2D screen coordinates
         screen_coord = bpy_extras.view3d_utils.location_3d_to_region_2d(region, rv3d, vertex)
 
         if screen_coord:
-            x, y = screen_coord.x, screen_coord.y
-            size = 10  # Adjust the size of the square as needed
-
-            # Draw a square around the vertex
-            bgl.glEnable(bgl.GL_BLEND)
-            bgl.glColor4f(1.0, 0.0, 0.0, 0.5)  # Red color with transparency
-
-            bgl.glBegin(bgl.GL_QUADS)
-            bgl.glVertex2f(x - size, y - size)
-            bgl.glVertex2f(x + size, y - size)
-            bgl.glVertex2f(x + size, y + size)
-            bgl.glVertex2f(x - size, y + size)
-            bgl.glEnd()
-
-            bgl.glDisable(bgl.GL_BLEND)
+            batch = batch_for_shader(self.shader, 'TRIS', {"pos": [x*radius+vertex for x in CUBE_COORDS]}, indices=TRIANGLE_INDICES)
+            batch.draw(self.shader)
 
     def draw(self, context):
         if not self.visible:
             return
         
+        from .config import CONFIG
+
         self.shader.bind()
-        self.shader.uniform_float("color", (1, 0, 0, 1))
+        self.shader.uniform_float("color", CONFIG.overlay_color1)
 
-        if self.objectType == self.OBJ_TYPE_CUBE:
-            batch = batch_for_shader(self.shader, 'LINES', {"pos": [x for x in cube_coords(self.meshOptions["scale"], self.direction.normalized(), mul_point(self.direction, -self.startPlane))]}, indices=CUBE_INDICES)
-            batch.draw(self.shader)
-
-            if "highlight" in self.meshOptions:
-                for vertex in self.meshOptions["highlight"]:
-                    self.draw_square_around_vertex(context, vertex, bpy.context.region)
+        if self.points:
+            for vertex in self.points:
+                self.draw_cube_around_vertex(vertex, 0.05)
             
 OVERLAY: HSU_Overlay
 

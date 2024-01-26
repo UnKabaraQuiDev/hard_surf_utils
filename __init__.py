@@ -19,7 +19,6 @@ from .boolean_ops import *
 from .menus import *
 
 NAME = __package__
-CONFIG: any = None
 
 previous_objects = None
 
@@ -31,10 +30,7 @@ def load_previous_objects():
         previous_objects = set(bpy.data.objects)
 
 def HSU_depsgraph_update_post(scene, depsgraph):
-    global CONFIG
-
-    #if CONFIG is None:
-    #    return
+    from .config import CONFIG
 
     if bpy.context and bpy.context.active_object and bpy.context.active_object.mode != "OBJECT":
         return
@@ -87,8 +83,8 @@ def register():
 
     bpy.utils.register_class(HSU_Preferences)
 
+    config.register()
     global CONFIG
-    CONFIG = bpy.context.preferences.addons[NAME].preferences
     print(f'Config for {NAME}: {CONFIG}')
 
     overlay_utils.register()

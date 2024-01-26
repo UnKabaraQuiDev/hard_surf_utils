@@ -3,7 +3,6 @@ from bpy.types import AddonPreferences
 from bpy.props import FloatProperty, StringProperty, BoolProperty, FloatVectorProperty
 from .__init__ import NAME
 
-
 # Function to get a value from the addon preferences
 def get_prop(name: str):
     preferences = bpy.context.preferences.addons[NAME].preferences
@@ -69,6 +68,16 @@ class HSU_Preferences(AddonPreferences):
         subtype="COLOR"
     )
 
+    cutter_color: FloatVectorProperty(
+        name="Cutter viewport color",
+        description="",
+        default=(1, 1, 1, 0.5),
+        min=0,
+        max=1,
+        size=4,
+        subtype="COLOR"
+    )
+
     # Draw the preferences in the addon settings
     def draw(self, context):
         layout = self.layout
@@ -88,4 +97,13 @@ class HSU_Preferences(AddonPreferences):
         row = layout.row(heading="Overlay options", align=False)
         row.prop(self, "overlay_color1")
         row.prop(self, "overlay_color2")
+
+        row = layout.row(heading="Quick Boolean", align=False)
+        row.prop(self, "cutter_color")
+
+CONFIG: HSU_Preferences = None
+
+def register():
+    global CONFIG
+    CONFIG = bpy.context.preferences.addons[NAME].preferences
 
