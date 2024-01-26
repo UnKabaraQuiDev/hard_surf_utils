@@ -7,6 +7,8 @@ from mathutils import Vector
 """
 TODO:
 O Write angle and count to top
+
+O context.area.header
 """
 
 class HSU_CircularArrayOperator(Operator):

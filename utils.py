@@ -1,5 +1,31 @@
 import bpy
+import mathutils
 from mathutils import Vector
+from bpy_extras import view3d_utils
+
+def get_grid_pos(context, event):
+    viewport_region = context.region
+    viewport_region_data = context.space_data.region_3d
+    viewport_matrix = viewport_region_data.view_matrix.inverted()
+    
+    # Shooting a ray from the camera, through the mouse cursor towards the grid with a length of 100000
+    # If the camera is more than 100000 units away from the grid it won't detect a point
+    ray_start = viewport_matrix.to_translation()
+    ray_depth = viewport_matrix @ Vector((0,0,-100000))
+    
+    # Get the 3D vector position of the mouse
+    ray_end = view3d_utils.region_2d_to_location_3d(viewport_region,viewport_region_data, (event.mouse_region_x, event.mouse_region_y), ray_depth )
+    
+    # A triangle on the grid plane. We use these 3 points to define a plane on the grid
+    point_1 = Vector((0,0,0))
+    point_2 = Vector((0,1,0))
+    point_3 = Vector((1,0,0))
+    
+    # Create a 3D position on the grid under the mouse cursor using the triangle as a grid plane
+    # and the ray cast from the camera
+    position_on_grid = mathutils.geometry.intersect_ray_tri(point_1,point_2,point_3,ray_end,ray_start,False )
+    
+    return position_on_grid
 
 def register_handler_if_unregistered(func, handler):
     if not func in handler:
@@ -43,6 +69,7 @@ def array_ray_cast(objs, matrix, ray_target, ray_origin):
     location: any = None
     normal: any = None
     face_index: any = None
+    object: any = None
 
     for obj in objs:
         loc, norm, fi = obj_ray_cast(obj, matrix, ray_target, ray_origin)
@@ -53,9 +80,12 @@ def array_ray_cast(objs, matrix, ray_target, ray_origin):
             location = loc
             normal = norm
             face_index = fi
-
-    return (min, location, normal, face_index)
-
+            object = obj
+    if location is not None:
+        return (min, location, normal, face_index, object)
+    else:
+        return None
+    
 def obj_ray_cast(obj, matrix, ray_target, ray_origin):
     """Wrapper for ray casting that moves the ray into object space"""
 
@@ -71,6 +101,6 @@ def obj_ray_cast(obj, matrix, ray_target, ray_origin):
     success, location, normal, face_index = obj.ray_cast(ray_origin_obj, ray_direction_obj)
 
     if success:
-        return location, normal, face_index
+        return (location, normal, face_index)
     else:
-        return None, None, None
+        return (None, None, None)
