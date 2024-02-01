@@ -24,7 +24,7 @@ CUBE_COORDS = [
     Vector((0, 0, 1)),
     Vector((0, 0, 0))]
 
-TRIANGLE_INDICES = [
+CUBE_TRIANGLE_INDICES = [
     (0, 1, 3),  # Triangle 1
     (0, 3, 2),  # Triangle 2
     (4, 5, 7),  # Triangle 3
@@ -38,6 +38,8 @@ TRIANGLE_INDICES = [
     (1, 3, 7),  # Triangle 11
     (1, 7, 5)   # Triangle 12
 ]
+
+TRIANGLE_INDICES = [(0, 1, 2)]
 
 def rotate_point(point, angles):
     x, y, z = point
@@ -79,8 +81,8 @@ class HSU_Overlay():
         
         self.handle: any
 
-        # Cube: scale
-        self.meshOptions = {}
+        self.triangles = None
+        self.points = None
 
     def register(self):
         self.handle = bpy.types.SpaceView3D.draw_handler_add(self.draw, (bpy.context,), 'WINDOW', 'POST_VIEW')
@@ -89,14 +91,26 @@ class HSU_Overlay():
         bpy.types.SpaceView3D.draw_handler_remove(self.handle, 'WINDOW')
 
     def draw_cube_around_vertex(self, vertex, radius):
-        rv3d = bpy.context.space_data.region_3d
-        region = bpy.context.region
+        #rv3d = bpy.context.space_data.region_3d
+        #region = bpy.context.region
 
         # Convert 3D vertex coordinates to 2D screen coordinates
-        screen_coord = bpy_extras.view3d_utils.location_3d_to_region_2d(region, rv3d, vertex)
+        #screen_coord = bpy_extras.view3d_utils.location_3d_to_region_2d(region, rv3d, vertex)
 
-        if screen_coord:
-            batch = batch_for_shader(self.shader, 'TRIS', {"pos": [x*radius+vertex for x in CUBE_COORDS]}, indices=TRIANGLE_INDICES)
+        if vertex:
+            batch = batch_for_shader(self.shader, 'TRIS', {"pos": [x*radius+vertex for x in CUBE_COORDS]})
+            batch.draw(self.shader)
+
+    def draw_triangle(self, vertices):
+        #rv3d = bpy.context.space_data.region_3d
+        #region = bpy.context.region
+
+        # Convert 3D vertex coordinates to 2D screen coordinates
+        #screen_coord = [bpy_extras.view3d_utils.location_3d_to_region_2d(region, rv3d, v) for v in vertices]
+        #print(f'draw triangle {vertices} {screen_coord}')
+
+        if vertices:
+            batch = batch_for_shader(self.shader, 'TRIS', {"pos": vertices})
             batch.draw(self.shader)
 
     def draw(self, context):
@@ -111,6 +125,11 @@ class HSU_Overlay():
         if self.points:
             for vertex in self.points:
                 self.draw_cube_around_vertex(vertex, 0.05)
+
+        self.shader.uniform_float("color", CONFIG.overlay_color2)
+        if self.triangles:
+            for tri in self.triangles:
+                self.draw_triangle(tri)
             
 OVERLAY: HSU_Overlay
 

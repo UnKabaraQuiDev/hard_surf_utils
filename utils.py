@@ -70,7 +70,7 @@ def get_grid_pos(context, event, normal: Vector=Vector((0, 0, 1))):
     # and the ray cast from the camera
     position_on_grid = mathutils.geometry.intersect_ray_tri(point_1,point_2,point_3,ray_end,ray_start,False)
     
-    return position_on_grid
+    return position_on_grid, [point_1, point_2, point_3]
 
 def register_handler_if_unregistered(func, handler):
     if not func in handler:

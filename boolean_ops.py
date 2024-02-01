@@ -81,17 +81,19 @@ class HSU_BooleanCubeOperator(Operator):
         if event.type in ['ESC', 'RIGHTMOUSE']:  # Cancel
             return {'CANCELLED'}
         
-        elif event.type in ['MOUSEMOVE', 'INBETWEEN_MOUSEMOVE']:
+        elif event.type in ['MOUSEMOVE']: # , 'INBETWEEN_MOUSEMOVE'
             if self.step == 0:
                 pass
             elif self.step == 1:
-                loc = get_grid_pos(context, event, self.direction)
+                loc, tri = get_grid_pos(context, event, self.direction)
                 if loc is not None:
+                    self.overlay.triangles[1] = tri
                     self.ctrl_points[-1] = loc
                     print(f'updated {loc} {self.ctrl_points}')
             elif self.step == 2:
-                loc = get_grid_pos(context, event, self.perpendicular_direction)
+                loc, tri = get_grid_pos(context, event, self.perpendicular_direction)
                 if loc is not None:
+                    self.overlay.triangles[2] = tri
                     self.ctrl_points[-1] = loc
                     print(f'updated {loc} {self.ctrl_points}')
             self.update_overlay()
@@ -106,10 +108,19 @@ class HSU_BooleanCubeOperator(Operator):
                 if result:
                     # add first control point
                     self.ctrl_points = [location, location.copy()] # fix control point and add the second one
-                    self.direction = ray_dir
+                    self.origin = self.ctrl_points[0].copy()
+                    self.direction = normal
+                    self.direction.negate()
+
+                    _, tri = get_grid_pos(context, event, self.direction)
+                    self.overlay.triangles = [tri, None, None]
 
                     self.cutter = create_edge_cube("noooo", context, location=location, rotation=vector_to_euler(self.direction))
                     
+                    if self.cutter is None:
+                        self.report({'ERROR'}, 'Could not create cube')
+                        return {'CANCELLED'}
+
                     self.cutter.data.materials.clear()
                     global VIEWPORT_MATERIAL
                     self.cutter.data.materials.append(get_viewport_transparent_material(VIEWPORT_MATERIAL))
@@ -121,7 +132,7 @@ class HSU_BooleanCubeOperator(Operator):
                     self.report({'WARNING'}, 'No surface hit in selection')
 
            elif self.step == 1: # second point
-                loc = get_grid_pos(context, event, self.direction)
+                loc, tri = get_grid_pos(context, event, self.direction)
                 if loc is not None:
                     self.ctrl_points.append(loc) # fix second point and add a 3rd one
                     print(f'set second point')
@@ -132,7 +143,7 @@ class HSU_BooleanCubeOperator(Operator):
                 print(f'perp {self.perpendicular_direction} dir {self.direction}')
 
            elif self.step == 2: # depth
-                loc = get_grid_pos(context, event, self.perpendicular_direction)
+                loc, tri = get_grid_pos(context, event, self.perpendicular_direction)
                 if loc is not None:
                     self.ctrl_points[-1] = loc
                     self.update_overlay()
