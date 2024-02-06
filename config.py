@@ -68,6 +68,16 @@ class HSU_Preferences(AddonPreferences):
         subtype="COLOR"
     )
 
+    overlay_color3: FloatVectorProperty(
+        name="Overlay color 3",
+        description="",
+        default=(1, 0, 0, 1),
+        min=0,
+        max=1,
+        size=4,
+        subtype="COLOR"
+    )
+
     cutter_color: FloatVectorProperty(
         name="Cutter viewport color",
         description="",
@@ -97,6 +107,7 @@ class HSU_Preferences(AddonPreferences):
         row = layout.row(heading="Overlay options", align=False)
         row.prop(self, "overlay_color1")
         row.prop(self, "overlay_color2")
+        row.prop(self, "overlay_color3")
 
         row = layout.row(heading="Quick Boolean", align=False)
         row.prop(self, "cutter_color")

@@ -26,18 +26,18 @@ def get_viewport_transparent_material(name):
     material.use_nodes = False
 
     # Access the material nodes
-    nodes = material.node_tree.nodes
+    #nodes = material.node_tree.nodes
 
     # Clear default nodes
-    for node in nodes:
-        nodes.remove(node)
+    #for node in nodes:
+    #    nodes.remove(node)
 
     from .config import CONFIG
     
     material.diffuse_color = CONFIG.cutter_color
     return material
 
-def get_grid_pos(context, event, normal: Vector=Vector((0, 0, 1))):
+def get_grid_pos(context, event, origin: Vector=Vector((0, 0, 0)), normal: Vector=Vector((0, 0, 1))):
     viewport_region = context.region
     viewport_region_data = context.space_data.region_3d
     viewport_matrix = viewport_region_data.view_matrix.inverted()
@@ -56,11 +56,11 @@ def get_grid_pos(context, event, normal: Vector=Vector((0, 0, 1))):
     # point_3 = Vector((1,0,0))
 
     # Find two perpendicular vectors to the normal
-    tangent_1 = normal.orthogonal().normalized()
+    tangent_1 = normal.cross(Vector((0, 0, 1))).normalized()
     tangent_2 = normal.cross(tangent_1).normalized()
 
     # Define three points on the XY plane
-    point_1 = Vector((0, 0, 0))
+    point_1 = origin
     point_2 = point_1 + tangent_1
     point_3 = point_1 + tangent_2
     

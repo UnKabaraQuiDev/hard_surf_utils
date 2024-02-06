@@ -85,13 +85,13 @@ class HSU_BooleanCubeOperator(Operator):
             if self.step == 0:
                 pass
             elif self.step == 1:
-                loc, tri = get_grid_pos(context, event, self.direction)
+                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[0], normal=self.direction)
                 if loc is not None:
                     self.overlay.triangles[1] = tri
                     self.ctrl_points[-1] = loc
                     print(f'updated {loc} {self.ctrl_points}')
             elif self.step == 2:
-                loc, tri = get_grid_pos(context, event, self.perpendicular_direction)
+                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[1], normal=self.perpendicular_direction)
                 if loc is not None:
                     self.overlay.triangles[2] = tri
                     self.ctrl_points[-1] = loc
@@ -111,8 +111,9 @@ class HSU_BooleanCubeOperator(Operator):
                     self.origin = self.ctrl_points[0].copy()
                     self.direction = normal
                     self.direction.negate()
+                    self.overlay.lines = [{"dir": self.direction.copy(), "color": (1, 0, 0), "origin": self.origin.copy()}]
 
-                    _, tri = get_grid_pos(context, event, self.direction)
+                    _, tri = get_grid_pos(context, event, origin=self.origin.copy(), normal=self.direction)
                     self.overlay.triangles = [tri, None, None]
 
                     self.cutter = create_edge_cube("noooo", context, location=location, rotation=vector_to_euler(self.direction))
@@ -125,7 +126,7 @@ class HSU_BooleanCubeOperator(Operator):
                     global VIEWPORT_MATERIAL
                     self.cutter.data.materials.append(get_viewport_transparent_material(VIEWPORT_MATERIAL))
                     self.cutter.hide_render = True
-                    context.view_layer.update()
+                    #context.view_layer.update()
 
                     self.step = 1
                 else:
@@ -140,6 +141,9 @@ class HSU_BooleanCubeOperator(Operator):
                 else:
                     self.report({'WARNING'}, 'Out of bounds')
                 self.perpendicular_direction = self.direction.copy().cross(Vector((0, 0, 1)))
+
+                self.overlay.lines.append({"dir": self.perpendicular_direction.copy(), "color": (0, 1, 0), "origin": self.ctrl_points[1].copy()})
+
                 print(f'perp {self.perpendicular_direction} dir {self.direction}')
 
            elif self.step == 2: # depth

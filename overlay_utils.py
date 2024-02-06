@@ -83,6 +83,7 @@ class HSU_Overlay():
 
         self.triangles = None
         self.points = None
+        self.lines = []
 
     def register(self):
         self.handle = bpy.types.SpaceView3D.draw_handler_add(self.draw, (bpy.context,), 'WINDOW', 'POST_VIEW')
@@ -113,6 +114,15 @@ class HSU_Overlay():
             batch = batch_for_shader(self.shader, 'TRIS', {"pos": vertices})
             batch.draw(self.shader)
 
+    def draw_line(self, direction: Vector, origin: Vector, length=100):
+        if not direction or not origin:
+            print(f'Cannot draw line {direction} {origin}')
+            return
+        dir2 = direction.copy()
+        dir2.negate()
+        batch = batch_for_shader(self.shader, 'LINES', {"pos": [dir2*length+origin, direction*length+origin]})
+        batch.draw(self.shader)
+
     def draw(self, context):
         if not self.visible:
             return
@@ -130,6 +140,11 @@ class HSU_Overlay():
         if self.triangles:
             for tri in self.triangles:
                 self.draw_triangle(tri)
+
+        if self.lines:
+            for line in self.lines:
+                self.shader.uniform_float("color", line["color"] if "color" in line else CONFIG.overlay_color3)
+                self.draw_line(line["dir"], line["origin"])
             
 OVERLAY: HSU_Overlay
 
