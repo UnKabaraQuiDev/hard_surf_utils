@@ -20,13 +20,12 @@ class HSU_BooleanCubeOperator(Operator):
 
     prev_mouse_region_x = 0
     prev_mouse_region_y = 0
-    ctrl_points = []
+    ctrl_points = [None, None, None]
     objects = []
-    direction = None
-    perpendicular_direction = None
+    directions = [None, None]
+    origin = None
     step = 0
     cutter = None
-    hit_point = None
     overlay = None
 
     @classmethod
@@ -45,16 +44,15 @@ class HSU_BooleanCubeOperator(Operator):
     def cleanup(self):
         self.prev_mouse_region_x = 0
         self.prev_mouse_region_y = 0
-        self.ctrl_points = []
+        self.ctrl_points = [None, None, None]
         self.objects = []
-        self.direction = None
-        self.perpendicular_direction = None
+        self.directions = [None, None]
         self.cutter = None
-        self.hit_point = None
 
     def update_overlay(self):
         if self.cutter:
-            self.cutter.scale = get_corner_bounds(self.ctrl_points[0], self.ctrl_points)
+            self.cutter.scale = get_corner_bounds(self.origin, self.ctrl_points)
+            print(f"scale: {self.cutter.scale}")
         self.overlay.points = self.ctrl_points
         return
         self.overlay.visible = True
@@ -65,18 +63,6 @@ class HSU_BooleanCubeOperator(Operator):
 
     def modal(self, context, event):
         print(event.type, event.value)
-
-        space = context.space_data
-        scene = context.scene
-        region = context.region
-        r3d = space.region_3d
-        rv3d = context.region_data
-        view_matrix = r3d.view_matrix
-        quaternion = r3d.view_rotation
-        rotation_matrix = quaternion.to_matrix().to_3x3()
-        forward_vector = rotation_matrix @ Vector((0, 0, 1))
-        if self.direction is None:
-            self.direction = forward_vector
         
         if event.type in ['ESC', 'RIGHTMOUSE']:  # Cancel
             return {'CANCELLED'}
@@ -84,18 +70,21 @@ class HSU_BooleanCubeOperator(Operator):
         elif event.type in ['MOUSEMOVE']: # , 'INBETWEEN_MOUSEMOVE'
             if self.step == 0:
                 pass
+
             elif self.step == 1:
-                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[0], normal=self.direction)
+                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[0], normal=self.directions[0])
                 if loc is not None:
                     self.overlay.triangles[1] = tri
-                    self.ctrl_points[-1] = loc
+                    self.ctrl_points[1] = loc
                     print(f'updated {loc} {self.ctrl_points}')
+
             elif self.step == 2:
-                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[1], normal=self.perpendicular_direction)
+                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[1].copy(), normal=self.directions[1])
                 if loc is not None:
                     self.overlay.triangles[2] = tri
-                    self.ctrl_points[-1] = loc
+                    self.ctrl_points[2] = self.ctrl_points[1].copy()+Vector((loc.x, 0, 0))
                     print(f'updated {loc} {self.ctrl_points}')
+
             self.update_overlay()
 
         elif event.type in ['MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE']:
@@ -106,50 +95,50 @@ class HSU_BooleanCubeOperator(Operator):
                 result, distance, location, normal, face_index, object, ray_origin, ray_dir = array_raycast(self.objects, context, event.mouse_region_x, event.mouse_region_y)
                 print(f'Distance: {result} {distance} {location}')
                 if result:
-                    # add first control point
-                    self.ctrl_points = [location, location.copy()] # fix control point and add the second one
-                    self.origin = self.ctrl_points[0].copy()
-                    self.direction = normal
-                    self.direction.negate()
-                    self.overlay.lines = [{"dir": self.direction.copy(), "color": (1, 0, 0), "origin": self.origin.copy()}]
+                    self.directions[0] = normal
+                    self.directions[0].negate()
+                    self.ctrl_points[0] = location # add first ctrl point
+                    self.ctrl_points[1] = location.copy() # add seconds ctrl point
+                    self.origin = location.copy()
 
-                    _, tri = get_grid_pos(context, event, origin=self.origin.copy(), normal=self.direction)
-                    self.overlay.triangles = [tri, None, None]
+                    self.overlay.lines = [{"dir": self.directions[0].copy(), "origin": self.origin, "color": [0, 0, 1, 1]}]
 
-                    self.cutter = create_edge_cube("noooo", context, location=location, rotation=vector_to_euler(self.direction))
-                    
-                    if self.cutter is None:
+                    _, tri = get_grid_pos(context, event, origin=self.origin.copy(), normal=self.directions[0])
+                    self.overlay.triangles = [tri, 0, 0]
+
+                    self.cutter = create_edge_cube("nooo", context, location=location, rotation=vector_to_euler(self.directions[0]))
+                    if not self.cutter:
                         self.report({'ERROR'}, 'Could not create cube')
                         return {'CANCELLED'}
-
+                    
                     self.cutter.data.materials.clear()
                     global VIEWPORT_MATERIAL
                     self.cutter.data.materials.append(get_viewport_transparent_material(VIEWPORT_MATERIAL))
                     self.cutter.hide_render = True
-                    #context.view_layer.update()
 
                     self.step = 1
                 else:
                     self.report({'WARNING'}, 'No surface hit in selection')
 
            elif self.step == 1: # second point
-                loc, tri = get_grid_pos(context, event, self.direction)
+                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[0], normal=self.directions[0])
                 if loc is not None:
-                    self.ctrl_points.append(loc) # fix second point and add a 3rd one
-                    print(f'set second point')
+                    self.ctrl_points[1] = loc
+                    self.ctrl_points[2] = loc.copy()
+                    
+                    self.directions[1] = self.directions[0].copy().cross(Vector((0, 0, 1)))
+
+                    self.overlay.lines = [{"dir": self.directions[1].copy(), "origin": self.ctrl_points[1], "color": [1, 0, 0, 1]}]
+
                     self.step = 2
                 else:
                     self.report({'WARNING'}, 'Out of bounds')
-                self.perpendicular_direction = self.direction.copy().cross(Vector((0, 0, 1)))
-
-                self.overlay.lines.append({"dir": self.perpendicular_direction.copy(), "color": (0, 1, 0), "origin": self.ctrl_points[1].copy()})
-
-                print(f'perp {self.perpendicular_direction} dir {self.direction}')
 
            elif self.step == 2: # depth
-                loc, tri = get_grid_pos(context, event, self.perpendicular_direction)
+                loc, tri = get_grid_pos(context, event, origin=self.ctrl_points[1], normal=self.directions[1])
                 if loc is not None:
-                    self.ctrl_points[-1] = loc
+                    print(f"{loc}, {loc.x}, {loc.y}")
+                    self.ctrl_points[2] = self.ctrl_points[1].copy()+Vector((loc.x, 0, 0))
                     self.update_overlay()
                     return {'FINISHED'}
                 else:

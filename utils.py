@@ -5,7 +5,7 @@ from bpy_extras import view3d_utils
 
 def vector_to_euler(rotation_vector):
     rotation_vector = rotation_vector.normalized()
-    rotation_quaternion = rotation_vector.to_track_quat('Z', 'Y')
+    rotation_quaternion = rotation_vector.to_track_quat('X', 'Y')
     rotation_euler = rotation_quaternion.to_euler()
     return rotation_euler
 
@@ -37,10 +37,11 @@ def get_viewport_transparent_material(name):
     material.diffuse_color = CONFIG.cutter_color
     return material
 
-def get_grid_pos(context, event, origin: Vector=Vector((0, 0, 0)), normal: Vector=Vector((0, 0, 1))):
+def get_grid_pos(context, event, origin: Vector=Vector((0, 0, 0)), normal: Vector=Vector((0, 0, 1)), max=1e4):
     viewport_region = context.region
     viewport_region_data = context.space_data.region_3d
     viewport_matrix = viewport_region_data.view_matrix.inverted()
+    cam_obj = bpy.context.space_data.camera
     
     # Shooting a ray from the camera, through the mouse cursor towards the grid with a length of 100000
     # If the camera is more than 100000 units away from the grid it won't detect a point
@@ -49,11 +50,6 @@ def get_grid_pos(context, event, origin: Vector=Vector((0, 0, 0)), normal: Vecto
     
     # Get the 3D vector position of the mouse
     ray_end = view3d_utils.region_2d_to_location_3d(viewport_region,viewport_region_data, (event.mouse_region_x, event.mouse_region_y), ray_depth)
-    
-    # A triangle on the grid plane. We use these 3 points to define a plane on the grid
-    # point_1 = Vector((0,0,0))
-    # point_2 = Vector((0,1,0))
-    # point_3 = Vector((1,0,0))
 
     # Find two perpendicular vectors to the normal
     tangent_1 = normal.cross(Vector((0, 0, 1))).normalized()
@@ -64,13 +60,18 @@ def get_grid_pos(context, event, origin: Vector=Vector((0, 0, 0)), normal: Vecto
     point_2 = point_1 + tangent_1
     point_3 = point_1 + tangent_2
     
-    print(f'from {normal} : {point_1} {point_2} {point_3}')
-
     # Create a 3D position on the grid under the mouse cursor using the triangle as a grid plane
     # and the ray cast from the camera
-    position_on_grid = mathutils.geometry.intersect_ray_tri(point_1,point_2,point_3,ray_end,ray_start,False)
+    position_on_grid = mathutils.geometry.intersect_ray_tri(point_1, point_2, point_3, ray_end, ray_start, False)
     
+    if viewport_is_orthographic(viewport_region_data, None if cam_obj is None else cam_obj.data):
+        # multiply by ray max
+        position_on_grid = position_on_grid * max
+
     return position_on_grid, [point_1, point_2, point_3]
+
+def viewport_is_orthographic(r3d, cam=None):
+    return r3d.view_perspective == "ORTHO" or (r3d.view_perspective == "CAMERA" and cam and cam.type == "ORTHO")
 
 def register_handler_if_unregistered(func, handler):
     if not func in handler:
@@ -90,26 +91,26 @@ def find_area(): # return first viewport area
         return None
 
 def get_corner_bounds(origin, all_points):
-    print(f'origin: {origin} {all_points}')
-    return get_bounds([(x.copy() - origin) for x in all_points])
+    modified_points = [x.copy() - origin if x is not None else None for x in all_points]
+    return get_bounds(modified_points)
 
 def get_bounds(all_points):
-    print(f'all_points: {all_points}')
+    # Initialize min and max vectors
+    min_vector = Vector((float('inf'), float('inf'), float('inf')))
+    max_vector = Vector((float('-inf'), float('-inf'), float('-inf')))
 
-    # Initialize min and max values for each axis
-    min_values = [float('inf')] * 3
-    max_values = [float('-inf')] * 3
-
-    # Update min and max values for each axis
+    # Update min and max vectors
     for point in all_points:
-        for i in range(3):  # Assuming x, y, z coordinates
-            min_values[i] = min(min_values[i], point[i])
-            max_values[i] = max(max_values[i], point[i])
+        if not point:
+            continue
+        for i in range(3):
+            min_vector[i] = min(min_vector[i], point[i])
+            max_vector[i] = max(max_vector[i], point[i])
 
     # Calculate the bounds (width, height, depth)
-    bounds = [max_values[i] - min_values[i] for i in range(3)]
+    bounds = max_vector - min_vector
 
-    return tuple(bounds)
+    return bounds
 
 def dist(vec1: Vector, vec2: Vector) -> float:
     if vec1 is None or vec2 is None:

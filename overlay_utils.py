@@ -134,15 +134,21 @@ class HSU_Overlay():
 
         if self.points:
             for vertex in self.points:
+                if not vertex:
+                    continue
                 self.draw_cube_around_vertex(vertex, 0.05)
 
         self.shader.uniform_float("color", CONFIG.overlay_color2)
         if self.triangles:
             for tri in self.triangles:
+                if not tri:
+                    continue
                 self.draw_triangle(tri)
 
         if self.lines:
             for line in self.lines:
+                if not line:
+                    continue
                 self.shader.uniform_float("color", line["color"] if "color" in line else CONFIG.overlay_color3)
                 self.draw_line(line["dir"], line["origin"])
             
