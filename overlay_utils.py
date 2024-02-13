@@ -79,17 +79,20 @@ class HSU_Overlay():
         self.startPlane: float = 0
         self.shader = gpu.shader.from_builtin('UNIFORM_COLOR')
         
-        self.handle: any
+        self.handle: any = None
 
         self.triangles = None
         self.points = None
         self.lines = []
 
-    def register(self):
-        self.handle = bpy.types.SpaceView3D.draw_handler_add(self.draw, (bpy.context,), 'WINDOW', 'POST_VIEW')
+    def enable(self):
+        if not self.handle:
+            self.handle = bpy.types.SpaceView3D.draw_handler_add(self.draw, (bpy.context,), 'WINDOW', 'POST_VIEW')
+        return self
 
-    def unregister(self):
-        bpy.types.SpaceView3D.draw_handler_remove(self.handle, 'WINDOW')
+    def disable(self):
+        if self.handle:
+            bpy.types.SpaceView3D.draw_handler_remove(self.handle, 'WINDOW')
 
     def draw_cube_around_vertex(self, vertex, radius):
         #rv3d = bpy.context.space_data.region_3d
@@ -157,8 +160,8 @@ OVERLAY: HSU_Overlay
 def register():
     global OVERLAY
     OVERLAY = HSU_Overlay()
-    OVERLAY.register()
+    # OVERLAY.enable()
 
 def unregister():
     global OVERLAY
-    OVERLAY.unregister()
+    OVERLAY.disable()

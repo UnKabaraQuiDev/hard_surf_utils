@@ -54,7 +54,7 @@ def get_grid_pos(context, event, origin: Vector=Vector((0, 0, 0)), normal: Vecto
     # Find two perpendicular vectors to the normal
     tangent_1 = normal.cross(Vector((0, 0, 1))).normalized()
     tangent_2 = normal.cross(tangent_1).normalized()
-
+    tangent_2.negate()
     # Define three points on the XY plane
     point_1 = origin
     point_2 = point_1 + tangent_1
@@ -91,6 +91,9 @@ def find_area(): # return first viewport area
         return None
 
 def get_corner_bounds(origin, all_points):
+    return Vector((all_points[1].y if all_points[1] is not None else 0,
+                   all_points[1].z if all_points[1] is not None else 0,
+                   all_points[2].x if all_points[2] is not None else 0))
     modified_points = [x.copy() - origin if x is not None else None for x in all_points]
     return get_bounds(modified_points)
 
@@ -108,7 +111,7 @@ def get_bounds(all_points):
             max_vector[i] = max(max_vector[i], point[i])
 
     # Calculate the bounds (width, height, depth)
-    bounds = max_vector - min_vector
+    bounds = max_vector -min_vector
 
     return bounds
 
