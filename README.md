@@ -1,6 +1,8 @@
 # Hard surface utils
 *For Blender 4.0+*
 
+# This has tons of bugs, and crashes when undo-ing, I'm working on it ._.
+
 ## Download: https://github.com/Poucy113/hard_surf_utils/tags
 
 ## Circular Array
